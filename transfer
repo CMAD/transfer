@@ -116,7 +116,7 @@ DEST=$DEST_BASE/$REMOTE/$SUBJECT
 # for in progress, failed, and successfull respectively
 mkdir -p "$DEST" || exit 1
 cd "$DEST"
-mkdir -p ok err "tmp/$SNAPSHOT_DATE/" || exit 1
+mkdir -p ok err "tmp/$SNAPSHOT_DATE/data.d/" || exit 1
 
 # the real work will be done in this folder while
 # it's still being transfered
@@ -139,6 +139,10 @@ echo "$SUBJECT" > subject
 # uuid tag
 echo "$UUID" > uuid 
 
+# uuid of the previous copy 
+# (the source of the hardlinks)
+cat "$DEST/ok/last/uuid" > previous
+
 # start of transfers
 echo `_date` > start 
 
@@ -154,9 +158,7 @@ echo `_date` > start
 echo `_date` > end 
 
 # size of files
-cd ./data.d/
-du -h . > ../size
-cd ..
+du -h ./data.d/ | sed s@./data.d/@./@ > ../size
 
 # check if there ware any errors, sucessfull and 
 # failed copies are quept on different folders
