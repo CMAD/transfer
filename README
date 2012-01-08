@@ -1,13 +1,14 @@
-This is a backup helper for rsync, it keeps things organized
+this is a backup helper for rsync, it keeps things organized
 saves spaces, and helps with reports. Check the source, it's
 short, and can be very helpfull.
 
 USAGE:
-  transfer [[ -r REMOTE ] [ -s SUBJECT ] [ -p PREFIX ] [ -b ] [ -d ]
-    [ -e PATTERN ] [ -0 ]] | [ -v ]
+transfer [[ -r REMOTE ] [ -l LOCAL ] [ -s SUBJECT ] 
+    [ -p PREFIX ] [ -b ] [ -d ] [ -e PATTERN ] [ -0 ]] | [ -v ]
 
 OPTIONS:
   -r: remote hostname, default: localhost
+  -l: local (backup server) hostname, default: localhost
   -s: subject, a grouping for backups, e.g. apache, 
       profiles, default: files
   -b: base destination, default: /var/backups/hosts.d/
@@ -41,11 +42,13 @@ ENVIRONMENT:
 RSYNC: name of the rsync executable
 RSYNC_OPTS: additional paramters to rsync (usefull for 
   excluding files for example)
+UUIDGEN: name of the uuidgen executable
+DATEFMT: date format used for backup directories
 
 Changing default values:
 
 This are intended for making it more scripting friendly, 
 parameters take precedense.
 
-REMOTE: -r, SUBJECT: -s, DEST_BASE: -b, PREFIX: -p
-
+REMOTE: -r, LOCAL: -l, SUBJECT: -s, DEST_BASE: -b, PREFIX: -p
+    
