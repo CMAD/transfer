@@ -1,0 +1,169 @@
+#!/bin/sh
+
+#transfer: a backup helper for rsync 
+#Copyright (C) 2012 Carlos Antelo
+
+#This program is free software: you can redistribute it and/or modify
+#it under the terms of the GNU General Public License as published by
+#the Free Software Foundation, either version 3 of the License, or
+#(at your option) any later version.
+
+#This program is distributed in the hope that it will be useful,
+#but WITHOUT ANY WARRANTY; without even the implied warranty of
+#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#GNU General Public License for more details.
+
+#You should have received a copy of the GNU General Public License
+#along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+VERSION="1.0beta" # usefully for future incompatibilities
+
+_print_help() {
+  cat <<"  EOF" | sed s/....//
+    This is a backup helper for rsync, it keeps things organized
+    saves spaces, and helps with reports. Check the source, it's
+    short, and can be very helpfull.
+
+    USAGE:
+    transfer [[ -r REMOTE ] [ -s SUBJECT ] [ -p PREFIX ] [ -b ] [ -d ]
+        [ -e PATTERN ] [ -0 ]] | [ -v ]
+
+    OPTIONS:
+      -r: remote hostname, default: localhost
+      -s: subject, a grouping for backups, e.g. apache, 
+          profiles, default: files
+      -b: base destination, default: /var/backups/hosts.d/
+      -p: prefix for all paths
+      -e: exclude, see the rsync manpage on --exclude
+      -0: use null as separator for directory names
+      -d: debug, set echo on the shell
+      -v: version, print version number
+
+    Be default backups are stored in /var/backups/hosts.d/, see 
+    the -b option.
+
+    transfer processes it's input from stdin, one folder/file per line, 
+    if you need null terminated paths, the -0 paramter does the job.
+
+    EXAMPLES:
+
+    REMOTE=example.net ssh "\$REMOTE" find /var/www -mindepth 1 \\ 
+      -maxdepth 1 -type d -0 | transfer -r "\$REMOTE" -s apache2 -0
+
+    transfer -r example.net -s apache <<EOF
+    /var/www/
+    /srv/www/
+    /etc/apache2/
+    EOF
+
+    transfer -r example.net -s apache2 < apache_folders.txt
+
+    ENVIRONMENT:
+
+    RSYNC: name of the rsync executable
+    RSYNC_OPTS: additional paramters to rsync (usefull for 
+      excluding files for example)
+
+    Changing default values:
+
+    This are intended for making it more scripting friendly, 
+    parameters take precedense.
+
+    REMOTE: -r, SUBJECT: -s, DEST_BASE: -b, PREFIX: -p
+    
+  EOF
+  exit 1
+}
+
+_date() {
+  # with this format, directory entries will by 
+  # shown ordered in the shell, with the oldest 
+  # copies first
+  date +'%Y%m%d%H%M%S'
+}
+
+# defaults
+REMOTE=${REMOTE-localhost}
+SUBJECT=${SUBJECT-files}
+DEST_BASE=${DEST_BASE-/var/backups/hosts.d/}
+PREFIX=${PREFIX-/}
+
+# paramter processing
+while getopts r:s:b:p:dve0 PARAM; do
+  case $PARAM in
+    r) REMOTE=$OPTARG: ;;
+    s) SUBJECT=$OPTARG ;;
+    b) DEST_BASE=$OPTARG ;;
+    d) set -x;;
+    v) echo "$VERSION"; exit 1;;
+    p) PREFIX=$OPTARG;;
+    e) RSYNC_OPTS="$RSYNC_OPTS --exclude $OPTARG";;
+    0) RSYNC_OPTS="$RSYNC_OPTS -0";;
+   \?) _print_help;;
+  esac
+done
+
+# both of this are used as identifiers, 
+SNAPSHOT_DATE=`_date` # the readable part
+UUID=`uuidgen`        # the unique part
+
+LOCAL=`hostname` # backup server hostname
+
+# backups are grouped related to subject and origin
+DEST=$DEST_BASE/$REMOTE/$SUBJECT
+
+# copies are further separated in tmp, err, and ok
+# for in progress, failed, and successfull respectively
+mkdir -p "$DEST" || exit 1
+cd "$DEST"
+mkdir -p ok err "tmp/$SNAPSHOT_DATE/" || exit 1
+
+# the real work will be done in this folder while
+# it's still being transfered
+cd "tmp/$SNAPSHOT_DATE/" || exit 1
+
+# all of the folowing plain files, along with the previous grouping
+# are aids at safequeeping, restoring, creating report
+# scripts, dashboards, etc
+
+# script version
+echo "$VERSION" > version 
+
+# servers involved
+echo "$LOCAL" > local  
+echo "$REMOTE" > remote 
+
+# service or dataset tag
+echo "$SUBJECT" > subject 
+
+# uuid tag
+echo "$UUID" > uuid 
+
+# start of transfers
+echo `_date` > start 
+
+# rsync will transfer each folder/file passed on standard input
+# hardlinking any files that were allready present on the previous
+# backup, check the rsync manpage for details 
+"${RSYNC-rsync}" --archive --recursive --protect-args \
+  --log-file=rsync.log --itemize-changes --files-from=- \
+  --link-dest="$DEST/ok/last/data.d" $RSYNC_OPTS \
+  "$REMOTE:$PREFIX" ./data.d/ || echo err > status
+
+# mark the end of them
+echo `_date` > end 
+
+# size of files
+cd ./data.d/
+du -h . > ../size
+cd ..
+
+# check if there ware any errors, sucessfull and 
+# failed copies are quept on different folders
+if [ -s status ]; then
+  mv "$DEST/tmp/$SNAPSHOT_DATE" "$DEST/err"
+else
+  echo "ok" > status
+  mv "$DEST/tmp/$SNAPSHOT_DATE" "$DEST/ok/"
+  ln -f -T -s "$DEST/ok/$SNAPSHOT_DATE" "$DEST/ok/last"
+fi
