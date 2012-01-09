@@ -85,6 +85,13 @@ _date() {
   date +${DATEFMT-%Y%m%d%H%M%S}
 }
 
+# add current working directory to relative paths
+_rel2abs() {
+ #only so that they don't break with cd, so . and .. are ok, as
+ #long as they are in the middle
+ sed 's@^[^/]@'"$PWD"'/&@'
+}
+
 # defaults
 REMOTE=${REMOTE-localhost}
 LOCAL=${LOCAL-localhost}
@@ -102,7 +109,7 @@ while getopts r:l:s:b:p:dve0 PARAM; do
     d) set -x;;
     v) echo "$VERSION"; exit 1;;
     p) PREFIX=$OPTARG;;
-    e) RSYNC_OPTS="$RSYNC_OPTS --exclude $OPTARG";;
+    e) RSYNC_OPTS="$RSYNC_OPTS --exclude=$OPTARG";;
     0) RSYNC_OPTS="$RSYNC_OPTS -0";;
    \?) _print_help;;
   esac
@@ -113,7 +120,7 @@ SNAPSHOT_DATE=`_date` # the readable part
 UUID=`${UUIDGEN-uuidgen}` # the unique part
 
 # backups are grouped related to subject and origin
-DEST="$DEST_BASE/$REMOTE/$SUBJECT"
+DEST="`echo $DEST_BASE/$REMOTE/$SUBJECT | _rel2abs`"
 
 # copies are further separated in tmp, err, and ok
 # for in progress, failed, and successfull respectively
@@ -124,6 +131,9 @@ mkdir -p ok err "tmp/$SNAPSHOT_DATE/data.d/" || exit 1
 # the real work will be done in this folder while
 # it's still being transfered
 cd "tmp/$SNAPSHOT_DATE/" || exit 1
+
+# from here on make sure to end in err if we recive a signal
+trap 'echo err > status' INT TERM
 
 # all of the folowing plain files, along with the previous grouping
 # are aids at safequeeping, restoring, creating report
