@@ -107,7 +107,7 @@ while getopts r:l:s:b:p:dve0 PARAM; do
     s) SUBJECT=$OPTARG;;
     b) DEST_BASE=$OPTARG;;
     d) set -x;;
-    v) echo "$VERSION"; exit 1;;
+    v) echo "$VERSION"; exit 0;;
     p) PREFIX=$OPTARG;;
     e) RSYNC_OPTS="$RSYNC_OPTS --exclude=$OPTARG";;
     0) RSYNC_OPTS="$RSYNC_OPTS -0";;
