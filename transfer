@@ -87,9 +87,9 @@ _date() {
 
 # add current working directory to relative paths
 _rel2abs() {
- #only so that they don't break with cd, so . and .. are ok, as
- #long as they are in the middle
- sed 's@^[^/]@'"$PWD"'/&@'
+  #only so that they don't break with cd, so . and .. are ok, as
+  #long as they are in the middle
+  sed ':a;${s@^[^/]@'"$PWD"'/&@;q};N;ba'
 }
 
 # defaults
