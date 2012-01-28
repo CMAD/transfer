@@ -102,7 +102,7 @@ PREFIX=${PREFIX-/}
 # paramter processing
 while getopts r:l:s:b:p:dve0 PARAM; do
   case $PARAM in
-    r) REMOTE=$OPTARG:;;
+    r) REMOTE=$OPTARG;;
     l) LOCAL=$OPTARG;;
     s) SUBJECT=$OPTARG;;
     b) DEST_BASE=$OPTARG;;
@@ -154,7 +154,7 @@ echo "$UUID" > uuid
 
 # uuid of the previous copy 
 # (the source of the hardlinks)
-cat "$DEST/ok/last/uuid" > previous
+cat "$DEST/ok/last/uuid" > previous 2>/dev/null
 
 # start of transfers
 echo `_date` > start 
