@@ -126,7 +126,7 @@ DEST="`echo $DEST_BASE/$REMOTE/$SUBJECT | _rel2abs`"
 # for in progress, failed, and successfull respectively
 mkdir -p "$DEST" || exit 1
 cd "$DEST"
-mkdir -p ok err "tmp/$SNAPSHOT_DATE/data.d/" || exit 1
+mkdir -p ok err "tmp/$SNAPSHOT_DATE/data.d/$PREFIX" || exit 1
 
 # the real work will be done in this folder while
 # it's still being transfered
@@ -159,13 +159,17 @@ cat "$DEST/ok/last/uuid" > previous 2>/dev/null
 # start of transfers
 echo `_date` > start 
 
+# if a previous backup exists, hardlink any files that were 
+# allready present on the previous backup
+if [ -d "$DEST/ok/last/data.d/$PREFIX" ]; then
+  RSYNC_OPTS="$RSYNC_OPTS --link-dest=$DEST/ok/last/data.d/$PREFIX"
+fi
+
 # rsync will transfer each folder/file passed on standard input
-# hardlinking any files that were allready present on the previous
-# backup, check the rsync manpage for details 
+# check the rsync manpage for details 
 "${RSYNC-rsync}" --archive --recursive --protect-args \
   --log-file=rsync.log --itemize-changes --files-from=- \
-  --link-dest="$DEST/ok/last/data.d" $RSYNC_OPTS \
-  "$REMOTE:$PREFIX" ./data.d/ || echo err > status
+  $RSYNC_OPTS "$REMOTE:$PREFIX" "./data.d/$PREFIX" || echo err > status
 
 # mark the end of them
 echo `_date` > end 
