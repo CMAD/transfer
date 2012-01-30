@@ -16,17 +16,18 @@
 #You should have received a copy of the GNU General Public License
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-VERSION="1.0beta4" # usefully for future incompatibilities
+VERSION="1.0beta5" # usefully for future incompatibilities
 
 _print_help() {
-  cat <<"  EOF" | sed s/....//
+  cat <<"  EOF" | cut -c5-
     This is a backup helper for rsync, it keeps things organized
     saves spaces, and helps with reports. Check the source, it's
     short, and can be very helpfull.
 
     USAGE:
     transfer [[ -r REMOTE ] [ -l LOCAL ] [ -s SUBJECT ] 
-        [ -p PREFIX ] [ -b ] [ -d ] [ -e PATTERN ] [ -0 ]] | [ -v ]
+        [ -p PREFIX ] [ -b ] [ -d ] [ -e PATTERN ]
+        [ -0 ]] | [ -v ] | [ -h ]
 
     OPTIONS:
       -r: remote hostname, default: localhost
@@ -39,6 +40,7 @@ _print_help() {
       -0: use null as separator for directory names
       -d: debug, set echo on the shell
       -v: version, print version number
+      -h: help, print this message
 
     Be default backups are stored in /var/backups/hosts.d/, see 
     the -b option.
@@ -75,14 +77,13 @@ _print_help() {
     REMOTE: -r, LOCAL: -l, SUBJECT: -s, DEST_BASE: -b, PREFIX: -p
     
   EOF
-  exit 1
 }
 
 _date() {
   # with the default format, directory entries will by 
   # shown ordered in the shell, with the oldest 
   # copies first
-  date +${DATEFMT-%Y%m%d%H%M%S}
+  date +"${DATEFMT-%Y%m%d%H%M%S}"
 }
 
 # add current working directory to relative paths
@@ -100,7 +101,7 @@ DEST_BASE=${DEST_BASE-/var/backups/hosts.d/}
 PREFIX=${PREFIX-/}
 
 # paramter processing
-while getopts r:l:s:b:p:dve0 PARAM; do
+while getopts r:l:s:b:p:dve0h PARAM; do
   case $PARAM in
     r) REMOTE=$OPTARG;;
     l) LOCAL=$OPTARG;;
@@ -111,16 +112,17 @@ while getopts r:l:s:b:p:dve0 PARAM; do
     p) PREFIX=$OPTARG;;
     e) RSYNC_OPTS="$RSYNC_OPTS --exclude=$OPTARG";;
     0) RSYNC_OPTS="$RSYNC_OPTS -0";;
-   \?) _print_help;;
+    h) _print_help; exit 0;;
+   \?) _print_help; exit 1;;
   esac
 done
 
 # both of this are used as identifiers, 
-SNAPSHOT_DATE=`_date` # the readable part
-UUID=`${UUIDGEN-uuidgen}` # the unique part
+SNAPSHOT_DATE=$(_date) # the readable part
+UUID=$(${UUIDGEN-uuidgen}) # the unique part
 
 # backups are grouped related to subject and origin
-DEST="`echo $DEST_BASE/$REMOTE/$SUBJECT | _rel2abs`"
+DEST=$(echo "$DEST_BASE/$REMOTE/$SUBJECT" | _rel2abs)
 
 # copies are further separated in tmp, err, and ok
 # for in progress, failed, and successfull respectively
@@ -157,7 +159,7 @@ echo "$UUID" > uuid
 cat "$DEST/ok/last/uuid" > previous 2>/dev/null
 
 # start of transfers
-echo `_date` > start 
+_date > start 
 
 # if a previous backup exists, hardlink any files that were 
 # allready present on the previous backup
@@ -172,7 +174,7 @@ fi
   $RSYNC_OPTS "$REMOTE:$PREFIX" "./data.d/$PREFIX" || echo err > status
 
 # mark the end of them
-echo `_date` > end 
+_date > end 
 
 # size of files
 du -h ./data.d/ | sed s@./data.d/@./@ > ./size
@@ -184,5 +186,6 @@ if [ -s status ]; then
 else
   echo "ok" > status
   mv "$DEST/tmp/$SNAPSHOT_DATE" "$DEST/ok/"
-  ln -f -T -s "$DEST/ok/$SNAPSHOT_DATE" "$DEST/ok/last"
+  rm -f "$DEST/ok/last"
+  ln -s "$DEST/ok/$SNAPSHOT_DATE" "$DEST/ok/last"
 fi
