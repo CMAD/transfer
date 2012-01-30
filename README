@@ -1,10 +1,10 @@
-this is a backup helper for rsync, it keeps things organized
+This is a backup helper for rsync, it keeps things organized
 saves spaces, and helps with reports. Check the source, it's
 short, and can be very helpfull.
 
 USAGE:
-transfer [[ -r REMOTE ] [ -l LOCAL ] [ -s SUBJECT ] 
-    [ -p PREFIX ] [ -b ] [ -d ] [ -e PATTERN ] [ -0 ]] | [ -v ]
+transfer [ [ -r REMOTE ] [ -l LOCAL ] [ -s SUBJECT ] 
+    [ -p PREFIX ] [ -b BASE ] [ -d ] ] | [ -v ] | [ -h ] 
 
 OPTIONS:
   -r: remote hostname, default: localhost
@@ -12,22 +12,20 @@ OPTIONS:
   -s: subject, a grouping for backups, e.g. apache, 
       profiles, default: files
   -b: base destination, default: /var/backups/hosts.d/
+      you can't use a relative path on this parameter
   -p: prefix for all paths
-  -e: exclude, see the rsync manpage on --exclude
-  -0: use null as separator for directory names
   -d: debug, set echo on the shell
   -v: version, print version number
+  -h: help, print this message
 
 Be default backups are stored in /var/backups/hosts.d/, see 
 the -b option.
 
 transfer processes it's input from stdin, one folder/file per line, 
-if you need null terminated paths, the -0 paramter does the job.
+if you need null terminated paths, use a wrapper on rsync and set the 
+-0 paramter youself, the same goes for excluding files.
 
-EXAMPLES:
-
-REMOTE=example.net ssh "\$REMOTE" find /var/www -mindepth 1 \\ 
-  -maxdepth 1 -type d -0 | transfer -r "\$REMOTE" -s apache2 -0
+EXAMPLE:
 
 transfer -r example.net -s apache <<EOF
 /var/www/
@@ -35,13 +33,9 @@ transfer -r example.net -s apache <<EOF
 /etc/apache2/
 EOF
 
-transfer -r example.net -s apache2 < apache_folders.txt
-
 ENVIRONMENT:
 
-RSYNC: name of the rsync executable
-RSYNC_OPTS: additional paramters to rsync (usefull for 
-  excluding files for example)
+RSYNC: name of the rsync executable or a wrapper
 UUIDGEN: name of the uuidgen executable
 DATEFMT: date format used for backup directories
 
@@ -51,4 +45,4 @@ This are intended for making it more scripting friendly,
 parameters take precedense.
 
 REMOTE: -r, LOCAL: -l, SUBJECT: -s, DEST_BASE: -b, PREFIX: -p
-    
+
