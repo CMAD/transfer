@@ -16,7 +16,7 @@
 #You should have received a copy of the GNU General Public License
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-VERSION="1.0beta5" # usefully for future incompatibilities
+VERSION="1.0beta6" # usefully for future incompatibilities
 
 _print_help() {
   cat <<"  EOF" | cut -c5-
@@ -25,9 +25,8 @@ _print_help() {
     short, and can be very helpfull.
 
     USAGE:
-    transfer [[ -r REMOTE ] [ -l LOCAL ] [ -s SUBJECT ] 
-        [ -p PREFIX ] [ -b ] [ -d ] [ -e PATTERN ]
-        [ -0 ]] | [ -v ] | [ -h ]
+    transfer [ [ -r REMOTE ] [ -l LOCAL ] [ -s SUBJECT ] 
+        [ -p PREFIX ] [ -b BASE ] [ -d ] ] | [ -v ] | [ -h ] 
 
     OPTIONS:
       -r: remote hostname, default: localhost
@@ -35,9 +34,8 @@ _print_help() {
       -s: subject, a grouping for backups, e.g. apache, 
           profiles, default: files
       -b: base destination, default: /var/backups/hosts.d/
+          you can't use a relative path on this parameter
       -p: prefix for all paths
-      -e: exclude, see the rsync manpage on --exclude
-      -0: use null as separator for directory names
       -d: debug, set echo on the shell
       -v: version, print version number
       -h: help, print this message
@@ -46,12 +44,10 @@ _print_help() {
     the -b option.
 
     transfer processes it's input from stdin, one folder/file per line, 
-    if you need null terminated paths, the -0 paramter does the job.
+    if you need null terminated paths, use a wrapper on rsync and set the 
+    -0 paramter youself, the same goes for excluding files.
 
-    EXAMPLES:
-
-    REMOTE=example.net ssh "\$REMOTE" find /var/www -mindepth 1 \\ 
-      -maxdepth 1 -type d -0 | transfer -r "\$REMOTE" -s apache2 -0
+    EXAMPLE:
 
     transfer -r example.net -s apache <<EOF
     /var/www/
@@ -59,13 +55,9 @@ _print_help() {
     /etc/apache2/
     EOF
 
-    transfer -r example.net -s apache2 < apache_folders.txt
-
     ENVIRONMENT:
 
-    RSYNC: name of the rsync executable
-    RSYNC_OPTS: additional paramters to rsync (usefull for 
-      excluding files for example)
+    RSYNC: name of the rsync executable or a wrapper
     UUIDGEN: name of the uuidgen executable
     DATEFMT: date format used for backup directories
 
@@ -86,13 +78,6 @@ _date() {
   date +"${DATEFMT-%Y%m%d%H%M%S}"
 }
 
-# add current working directory to relative paths
-_rel2abs() {
-  #only so that they don't break with cd, so . and .. are ok, as
-  #long as they are in the middle
-  sed ':a;${s@^[^/]@'"$PWD"'/&@;q};N;ba'
-}
-
 # defaults
 REMOTE=${REMOTE-localhost}
 LOCAL=${LOCAL-localhost}
@@ -101,7 +86,7 @@ DEST_BASE=${DEST_BASE-/var/backups/hosts.d/}
 PREFIX=${PREFIX-/}
 
 # paramter processing
-while getopts r:l:s:b:p:dve0h PARAM; do
+while getopts r:l:s:b:p:dvh PARAM; do
   case $PARAM in
     r) REMOTE=$OPTARG;;
     l) LOCAL=$OPTARG;;
@@ -110,19 +95,23 @@ while getopts r:l:s:b:p:dve0h PARAM; do
     d) set -x;;
     v) echo "$VERSION"; exit 0;;
     p) PREFIX=$OPTARG;;
-    e) RSYNC_OPTS="$RSYNC_OPTS --exclude=$OPTARG";;
-    0) RSYNC_OPTS="$RSYNC_OPTS -0";;
     h) _print_help; exit 0;;
    \?) _print_help; exit 1;;
   esac
 done
+
+# can't take relative paths on DEST_BASE
+if $(echo "$DEST_BASE" | grep -q ^[^/]); then
+  echo You must use an absolute path if you change DEST_BASE
+  exit 1
+fi
 
 # both of this are used as identifiers, 
 SNAPSHOT_DATE=$(_date) # the readable part
 UUID=$(${UUIDGEN-uuidgen}) # the unique part
 
 # backups are grouped related to subject and origin
-DEST=$(echo "$DEST_BASE/$REMOTE/$SUBJECT" | _rel2abs)
+DEST=$DEST_BASE/$REMOTE/$SUBJECT
 
 # copies are further separated in tmp, err, and ok
 # for in progress, failed, and successfull respectively
@@ -164,20 +153,20 @@ _date > start
 # if a previous backup exists, hardlink any files that were 
 # allready present on the previous backup
 if [ -d "$DEST/ok/last/data.d/$PREFIX" ]; then
-  RSYNC_OPTS="$RSYNC_OPTS --link-dest=$DEST/ok/last/data.d/$PREFIX"
+  PREVIOUS=--link-dest=$DEST/ok/last/data.d/$PREFIX
 fi
 
 # rsync will transfer each folder/file passed on standard input
 # check the rsync manpage for details 
 "${RSYNC-rsync}" --archive --recursive --protect-args \
   --log-file=rsync.log --itemize-changes --files-from=- \
-  $RSYNC_OPTS "$REMOTE:$PREFIX" "./data.d/$PREFIX" || echo err > status
+  "$PREVIOUS" "$REMOTE:$PREFIX" "./data.d/$PREFIX" || echo err > status
 
 # mark the end of them
 _date > end 
 
 # size of files
-du -h ./data.d/ | sed s@./data.d/@./@ > ./size
+du -h ./data.d/ | sed s@./data.d/@./@ > size
 
 # check if there ware any errors, sucessfull and 
 # failed copies are quept on different folders
