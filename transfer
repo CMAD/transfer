@@ -101,7 +101,7 @@ while getopts r:l:s:b:p:dvh PARAM; do
 done
 
 # can't take relative paths on DEST_BASE
-if $(echo "$DEST_BASE" | grep -q ^[^/]); then
+if [ "${DEST_BASE##/*}" ]; then
   echo You must use an absolute path if you change DEST_BASE
   exit 1
 fi
