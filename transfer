@@ -100,7 +100,6 @@ while getopts r:l:s:b:p:dvh PARAM; do
   esac
 done
 
-# can't take relative paths on DEST_BASE
 if [ "${DEST_BASE##/*}" ]; then
   echo You must use an absolute path if you change DEST_BASE
   exit 1
