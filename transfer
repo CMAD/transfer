@@ -188,7 +188,7 @@ _date > end
 # of files saves time
 du -h ./data.d/ | sed s@./data.d/@./@ > size
 
-# sucessfull and failed copies are quept on 
+# sucessfull and failed copies are kept on 
 # different folders
 if [ -s status ]; then
   mv "$DEST/tmp/$SNAPSHOT_DATE" "$DEST/err"
