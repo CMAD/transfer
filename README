@@ -1,6 +1,5 @@
-This is a backup helper for rsync, it keeps things organized
-saves space, and helps with reports. Check the source, it's
-short, and can be very helpfull.
+This is a backup script around rsync, it pulls files from 
+a remote server in the local machine through ssh. 
 
 USAGE:
 transfer [ [ -r REMOTE ] [ -l LOCAL ] [ -s SUBJECT ] 
@@ -8,22 +7,54 @@ transfer [ [ -r REMOTE ] [ -l LOCAL ] [ -s SUBJECT ]
 
 OPTIONS:
   -r: remote hostname, default: localhost
-  -l: local (backup server) hostname, default: localhost
+  -l: local hostname, default: localhost (for metadata only)
   -s: subject, a grouping for backups, e.g. apache, 
-      profiles, default: files
+      default: files
   -b: base destination, default: /var/backups/hosts.d/
-      you can't use a relative path on this parameter
-  -p: prefix for all paths
+      you can't use a relative path with this parameter
+  -p: prefix for all source paths
   -d: debug, set echo on the shell
   -v: version, print version number
   -h: help, print this message
 
-Be default backups are stored in /var/backups/hosts.d/, see 
-the -b option.
+Be default backups are stored in /var/backups/hosts.d/
 
-transfer processes it's input from stdin, one folder/file per line, 
-if you need null terminated paths, use a wrapper on rsync and set the 
--0 paramter youself, the same goes for excluding files.
+Inside for every different remote, a folder will
+be kept.
+
+A subject parameter intended to specify either a service
+or otherwise know set of files further distinguishes the 
+contents.
+
+e.g. /var/backups/hosts.d/example.net/vhosts
+
+Inside this folder even further distinction is made, 3 
+different folders establish the status of the copies:
+
+tmp: meanwhile a copy is being made
+err: if the script is interrupted or the transmission fails
+ok: when the script finishes successfully
+
+The final distinction is the date the copy was run. 
+A symbolic link is present on the ok folder 
+pointing to the last copy.
+
+A copy holds various plain text files with info on
+when and how was the backup made, including the remote and 
+local hostnames, the start, and finish time, size of the
+archive, status, etc. 
+
+Finally along with the metadata the data.d folder holds the 
+actual files, keeping the full original path, file 
+permissions, etc.
+
+When possible the last ok copy of the same particular set of
+files is used for hardlinking, saving space.
+
+transfer takes input from stdin, one folder/file per line, 
+currently if you need null terminated paths, you can set a wrapper 
+around rsync, presetting the -0 parameter, the same goes for 
+excluding files.
 
 EXAMPLE:
 
@@ -41,8 +72,7 @@ DATEFMT: date format used for backup directories
 
 Changing default values:
 
-This are intended for making it more scripting friendly, 
-parameters take precedense.
-
 REMOTE: -r, LOCAL: -l, SUBJECT: -s, DEST_BASE: -b, PREFIX: -p
+
+Parameters take precedence.
 

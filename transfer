@@ -16,13 +16,12 @@
 #You should have received a copy of the GNU General Public License
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-VERSION="1.0beta7" # usefully for future incompatibilities
+VERSION="1.0beta8" # usefully for future incompatibilities
 
 _print_help() {
   cat <<"  EOF" | cut -c5-
-    This is a backup helper for rsync, it keeps things organized
-    saves space, and helps with reports. Check the source, it's
-    short, and can be very helpfull.
+    This is a backup script around rsync, it pulls files from 
+    a remote server in the local machine through ssh. 
 
     USAGE:
     transfer [ [ -r REMOTE ] [ -l LOCAL ] [ -s SUBJECT ] 
@@ -30,22 +29,54 @@ _print_help() {
 
     OPTIONS:
       -r: remote hostname, default: localhost
-      -l: local (backup server) hostname, default: localhost
+      -l: local hostname, default: localhost (for metadata only)
       -s: subject, a grouping for backups, e.g. apache, 
-          profiles, default: files
+          default: files
       -b: base destination, default: /var/backups/hosts.d/
-          you can't use a relative path on this parameter
-      -p: prefix for all paths
+          you can't use a relative path with this parameter
+      -p: prefix for all source paths
       -d: debug, set echo on the shell
       -v: version, print version number
       -h: help, print this message
 
-    Be default backups are stored in /var/backups/hosts.d/, see 
-    the -b option.
+    Be default backups are stored in /var/backups/hosts.d/
 
-    transfer processes it's input from stdin, one folder/file per line, 
-    if you need null terminated paths, use a wrapper on rsync and set the 
-    -0 paramter youself, the same goes for excluding files.
+    Inside for every different remote, a folder will
+    be kept.
+
+    A subject parameter intended to specify either a service
+    or otherwise know set of files further distinguishes the 
+    contents.
+
+    e.g. /var/backups/hosts.d/example.net/vhosts
+
+    Inside this folder even further distinction is made, 3 
+    different folders establish the status of the copies:
+
+    tmp: meanwhile a copy is being made
+    err: if the script is interrupted or the transmission fails
+    ok: when the script finishes successfully
+
+    The final distinction is the date the copy was run. 
+    A symbolic link is present on the ok folder 
+    pointing to the last copy.
+
+    A copy holds various plain text files with info on
+    when and how was the backup made, including the remote and 
+    local hostnames, the start, and finish time, size of the
+    archive, status, etc. 
+
+    Finally along with the metadata the data.d folder holds the 
+    actual files, keeping the full original path, file 
+    permissions, etc.
+
+    When possible the last ok copy of the same particular set of
+    files is used for hardlinking, saving space.
+
+    transfer takes input from stdin, one folder/file per line, 
+    currently if you need null terminated paths, you can set a wrapper 
+    around rsync, presetting the -0 parameter, the same goes for 
+    excluding files.
 
     EXAMPLE:
 
@@ -63,10 +94,9 @@ _print_help() {
 
     Changing default values:
 
-    This are intended for making it more scripting friendly, 
-    parameters take precedense.
-
     REMOTE: -r, LOCAL: -l, SUBJECT: -s, DEST_BASE: -b, PREFIX: -p
+
+    Parameters take precedence.
     
   EOF
 }
@@ -78,14 +108,16 @@ _date() {
   date +"${DATEFMT-%Y%m%d%H%M%S}"
 }
 
-# defaults
+# give the opportunity to override defaults via shell
+# exports and parameters
+{
+
 REMOTE=${REMOTE-localhost}
 LOCAL=${LOCAL-localhost}
 SUBJECT=${SUBJECT-files}
 DEST_BASE=${DEST_BASE-/var/backups/hosts.d/}
 PREFIX=${PREFIX-/}
 
-# paramter processing
 while getopts r:l:s:b:p:dvh PARAM; do
   case $PARAM in
     r) REMOTE=$OPTARG;;
@@ -101,74 +133,63 @@ while getopts r:l:s:b:p:dvh PARAM; do
 done
 
 if [ "${DEST_BASE##/*}" ]; then
-  echo You must use an absolute path if you change DEST_BASE
+  echo You must use an absolute path for the base destination
   exit 1
 fi
 
-# both of this are used as identifiers, 
-SNAPSHOT_DATE=$(_date) # the readable part
-UUID=$(${UUIDGEN-uuidgen}) # the unique part
+}
 
-# backups are grouped related to subject and origin
+# date is used as the identifier of the backup and is 
+# more readable
+SNAPSHOT_DATE=$(_date) 
+# uuid is most usefull as a tie-breaker, 
+# when moving copies to another media, or along with other tools
+UUID=$(${UUIDGEN-uuidgen})
+
+# backups are organized in a per host, per service basis
 DEST=$DEST_BASE/$REMOTE/$SUBJECT
 
-# copies are further separated in tmp, err, and ok
-# for in progress, failed, and successfull respectively
-mkdir -p "$DEST" || exit 1
-cd "$DEST"
-mkdir -p ok err "tmp/$SNAPSHOT_DATE/data.d/$PREFIX" || exit 1
+# further separated by it's status and date
+mkdir -p "$DEST/ok/../err/../tmp/$SNAPSHOT_DATE/data.d/$PREFIX"
 
-# the real work will be done in this folder while
-# it's still being transfered
-cd "tmp/$SNAPSHOT_DATE/" || exit 1
+# the copy will remain in tmp until the backup finishes
+cd "$DEST/tmp/$SNAPSHOT_DATE" || exit 1
 
-# from here on make sure to end in err if we recive a signal
+# make sure to fail clean
 trap 'echo err > status' INT TERM
 
-# all of the folowing plain files, along with the previous grouping
-# are aids at safequeeping, restoring, creating report
-# scripts, dashboards, etc
-
-# script version
+# save safe-keeping information 
 echo "$VERSION" > version 
-
-# servers involved
-echo "$LOCAL" > local  
-echo "$REMOTE" > remote 
-
-# service or dataset tag
+echo "$REMOTE"  > remote 
 echo "$SUBJECT" > subject 
+echo "$LOCAL"   > local  
+echo "$UUID"    > uuid 
 
-# uuid tag
-echo "$UUID" > uuid 
-
-# uuid of the previous copy 
-# (the source of the hardlinks)
-cat "$DEST/ok/last/uuid" > previous 2>/dev/null
-
-# start of transfers
-_date > start 
-
-# if a previous backup exists, hardlink any files that were 
-# allready present on the previous backup
+# the same files can just share the same inode,
 if [ -d "$DEST/ok/last/data.d/$PREFIX" ]; then
   PREVIOUS=--link-dest=$DEST/ok/last/data.d/$PREFIX
+  cat "$DEST/ok/last/uuid" > previous
 fi
 
-# rsync will transfer each folder/file passed on standard input
-# check the rsync manpage for details 
+_date > start 
+
+{
+# read from standard input, directories are pulled instead 
+# of pushed to the backup server. 
+
 "${RSYNC-rsync}" --archive --recursive --protect-args \
   --log-file=rsync.log --itemize-changes --files-from=- \
-  "$PREVIOUS" "$REMOTE:$PREFIX" "./data.d/$PREFIX" || echo err > status
+  "$PREVIOUS" "$REMOTE:$PREFIX" "./data.d/$PREFIX"
+} || echo err > status
 
-# mark the end of them
 _date > end 
 
-# size of files
+# as backups won't change once run, storing the size
+# of files saves time
 du -h ./data.d/ | sed s@./data.d/@./@ > size
 
-# check if there ware any errors, sucessfull and 
-# failed copies are quept on different folders
+# sucessfull and failed copies are quept on 
+# different folders
 if [ -s status ]; then
   mv "$DEST/tmp/$SNAPSHOT_DATE" "$DEST/err"
 else
