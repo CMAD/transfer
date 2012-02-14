@@ -17,7 +17,7 @@ OPTIONS:
   -v: version, print version number
   -h: help, print this message
 
-Be default backups are stored in /var/backups/hosts.d/
+By default backups are stored in /var/backups/hosts.d/
 
 Inside for every different remote, a folder will
 be kept.
