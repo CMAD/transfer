@@ -16,7 +16,7 @@
 #You should have received a copy of the GNU General Public License
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-VERSION="1.0beta10" # usefully for future incompatibilities
+version="1.0beta11" # usefully for future incompatibilities
 
 _print_help() {
   cat <<"  EOF" | cut -c5-
@@ -127,7 +127,7 @@ while getopts r:l:s:b:p:dvh PARAM; do
     s) SUBJECT=$OPTARG;;
     b) DEST_BASE=$OPTARG;;
     d) set -x;;
-    v) echo "$VERSION"; exit 0;;
+    v) echo "$version"; exit 0;;
     p) PREFIX=$OPTARG;;
     h) _print_help; exit 0;;
    \?) _print_help; exit 1;;
@@ -148,43 +148,43 @@ fi
 
 # date is used as the identifier of the backup and is 
 # more readable
-SNAPSHOT_DATE=$(_date) 
+snapshot_date=$(_date) 
 # uuid is most usefull as a tie-breaker, 
 # when moving copies to another media, or along with other tools
-UUID=$($UUIDGEN)
+uuid=$($UUIDGEN)
 
 # backups are organized in a per host, per service basis
-DEST=$DEST_BASE/$REMOTE/$SUBJECT
+dest=$DEST_BASE/$REMOTE/$SUBJECT
 
 # further separated by it's status and date
-mkdir -p "$DEST/ok/../err/../tmp/$SNAPSHOT_DATE/data.d/$PREFIX"
+mkdir -p "$dest/ok/../err/../tmp/$snapshot_date/data.d/$PREFIX"
 
 # the copy will remain in tmp until the backup finishes
-cd "$DEST/tmp/$SNAPSHOT_DATE" || exit 1
+cd "$dest/tmp/$snapshot_date" || exit 1
 
 # make sure to fail clean
 trap 'echo err > status' INT TERM
 
 # save safe-keeping information 
-echo "$VERSION" > version 
+echo "$version" > version 
 echo "$REMOTE"  > remote 
 echo "$SUBJECT" > subject 
 echo "$LOCAL"   > local  
-echo "$UUID"    > uuid 
+echo "$uuid"    > uuid 
 
 # the same files can just share the same inode,
-if [ -d "$DEST/ok/last/data.d/$PREFIX" ]; then
-  PREVIOUS=$DEST/ok/last/data.d/$PREFIX
-  cat "$DEST/ok/last/uuid" > previous
+if [ -d "$dest/ok/last/data.d/$PREFIX" ]; then
+  previous=$dest/ok/last/data.d/$PREFIX
+  cat "$dest/ok/last/uuid" > previous
 else 
-  PREVIOUS=/dev/null
+  previous=/dev/null
 fi
 
 # when running on the same machine, make the transfer local
 if [ "$REMOTE" != "$LOCAL" ]; then
-  RSYNC_SRC="$REMOTE:$PREFIX"
+  rsync_src="$REMOTE:$PREFIX"
 else
-  RSYNC_SRC="$PREFIX"
+  rsync_src="$PREFIX"
 fi
 
 _date > start 
@@ -195,7 +195,7 @@ _date > start
 
 "$RSYNC" --archive --recursive --protect-args \
   --log-file=rsync.log --itemize-changes --files-from=- \
-  --link-dest="$PREVIOUS" "$RSYNC_SRC" "./data.d/$PREFIX"
+  --link-dest="$previous" "$rsync_src" "./data.d/$PREFIX"
 } || echo err > status
 
 _date > end 
@@ -207,10 +207,10 @@ du -h ./data.d/ | sed s@./data.d/@./@ > size
 # sucessfull and failed copies are kept on 
 # different folders
 if [ -s status ]; then
-  mv "$DEST/tmp/$SNAPSHOT_DATE" "$DEST/err"
+  mv "$dest/tmp/$snapshot_date" "$dest/err"
 else
   echo "ok" > status
-  mv "$DEST/tmp/$SNAPSHOT_DATE" "$DEST/ok/"
-  rm -f "$DEST/ok/last"
-  ln -s "$DEST/ok/$SNAPSHOT_DATE" "$DEST/ok/last"
+  mv "$dest/tmp/$snapshot_date" "$dest/ok/"
+  rm -f "$dest/ok/last"
+  ln -s "$dest/ok/$snapshot_date" "$dest/ok/last"
 fi
