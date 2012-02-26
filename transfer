@@ -117,6 +117,8 @@ LOCAL=${LOCAL-localhost}
 SUBJECT=${SUBJECT-files}
 DEST_BASE=${DEST_BASE-/var/backups/hosts.d/}
 PREFIX=${PREFIX-/}
+RSYNC=${RSYNC-$(which rsync)}
+UUIDGEN=${UUIDGEN-$(which uuidgen)}
 
 while getopts r:l:s:b:p:dvh PARAM; do
   case $PARAM in
@@ -132,8 +134,13 @@ while getopts r:l:s:b:p:dvh PARAM; do
   esac
 done
 
+if [ -z "${RSYNC}" ] || [ -z "${UUIDGEN}" ]; then
+  echo You must have rsync and uuidgen installed.
+  exit 1
+fi
+
 if [ "${DEST_BASE##/*}" ]; then
-  echo You must use an absolute path for the base destination
+  echo You must use an absolute path for the base destination.
   exit 1
 fi
 
@@ -144,7 +151,7 @@ fi
 SNAPSHOT_DATE=$(_date) 
 # uuid is most usefull as a tie-breaker, 
 # when moving copies to another media, or along with other tools
-UUID=$(${UUIDGEN-uuidgen})
+UUID=$($UUIDGEN)
 
 # backups are organized in a per host, per service basis
 DEST=$DEST_BASE/$REMOTE/$SUBJECT
@@ -179,7 +186,7 @@ _date > start
 # read from standard input, directories are pulled instead 
 # of pushed to the backup server. 
 
-"${RSYNC-rsync}" --archive --recursive --protect-args \
+"$RSYNC" --archive --recursive --protect-args \
   --log-file=rsync.log --itemize-changes --files-from=- \
   --link-dest="$PREVIOUS" "$REMOTE:$PREFIX" "./data.d/$PREFIX"
 } || echo err > status
