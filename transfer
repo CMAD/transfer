@@ -180,6 +180,13 @@ else
   PREVIOUS=/dev/null
 fi
 
+# when running on the same machine, make the transfer local
+if [ "$REMOTE" != "$LOCAL" ]; then
+  RSYNC_SRC="$REMOTE:$PREFIX"
+else
+  RSYNC_SRC="$PREFIX"
+fi
+
 _date > start 
 
 {
@@ -188,7 +195,7 @@ _date > start
 
 "$RSYNC" --archive --recursive --protect-args \
   --log-file=rsync.log --itemize-changes --files-from=- \
-  --link-dest="$PREVIOUS" "$REMOTE:$PREFIX" "./data.d/$PREFIX"
+  --link-dest="$PREVIOUS" "$RSYNC_SRC" "./data.d/$PREFIX"
 } || echo err > status
 
 _date > end 
