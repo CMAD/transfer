@@ -16,7 +16,7 @@
 #You should have received a copy of the GNU General Public License
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-version="1.0beta11" # usefully for future incompatibilities
+version="1.0beta12" # usefully for future incompatibilities
 
 _print_help() {
   cat <<"  EOF" | cut -c5-
@@ -156,11 +156,16 @@ uuid=$($UUIDGEN)
 # backups are organized in a per host, per service basis
 dest=$DEST_BASE/$REMOTE/$SUBJECT
 
+{
 # further separated by it's status and date
-mkdir -p "$dest/ok/../err/../tmp/$snapshot_date/data.d/$PREFIX"
+
+mkdir -p "$dest/ok/../err/../tmp/../empty" &&
+mkdir -p "$dest/tmp/$snapshot_date/data.d/$PREFIX" 
+
+} || exit 1
 
 # the copy will remain in tmp until the backup finishes
-cd "$dest/tmp/$snapshot_date" || exit 1
+cd "$dest/tmp/$snapshot_date"
 
 # make sure to fail clean
 trap 'echo err > status' INT TERM
@@ -172,12 +177,12 @@ echo "$SUBJECT" > subject
 echo "$LOCAL"   > local  
 echo "$uuid"    > uuid 
 
-# the same files can just share the same inode,
+# the same files can just share the same inode
 if [ -d "$dest/ok/last/data.d/$PREFIX" ]; then
   previous=$dest/ok/last/data.d/$PREFIX
   cat "$dest/ok/last/uuid" > previous
 else 
-  previous=/dev/null
+  previous="$dest/empty"
 fi
 
 # when running on the same machine, make the transfer local
