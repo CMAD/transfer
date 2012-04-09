@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/pygment_trac.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print" />
+
+    <title>transfer by CMAD</title>
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <h1>transfer</h1>
+        <h2>Simple, but powerful rsync based backup mechanism.</h2>
+
+        <section id="downloads">
+          <a href="https://github.com/CMAD/transfer/zipball/master" class="btn">Download as .zip</a>
+          <a href="https://github.com/CMAD/transfer/tarball/master" class="btn">Download as .tar.gz</a>
+          <a href="https://github.com/CMAD/transfer" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <h1>What is this about?</h1>
+
+<p>This project is a simple incremental backup script that uses
+rsync to transfer files.</p>
+
+<p>Here is an example of how you might call it once:</p>
+
+<div class="highlight">
+<pre>transfer -r example.net -s apache <span class="s">&lt;&lt;EOF</span>
+<span class="s">/var/www/</span>
+<span class="s">/srv/www/</span>
+<span class="s">/etc/apache2/</span>
+<span class="s">EOF</span>
+</pre>
+</div>
+
+
+<p>And what it may give you in return:</p>
+
+<pre><code>/var/backups/hosts.d/ # the base directory to store backups into
+└── example.net       # remote
+     └── apache       # subject
+         ├── empty    
+         ├── err      # failed copies
+         ├── ok       # copies that finished correctly
+         │   ├── 20120405195300  # date/time
+         │   │   ├── data.d      # actuall files
+         │   │   ├── start       # start date/time
+         │   │   ├── end         # finish date/time
+         │   │   ├── subject     # a name like apache or files
+         │   │   ├── remote      # remote server hostname
+         │   │   ├── local       # backup server hostname
+         │   │   ├── rsync.log   # transfer details
+         │   │   ├── size        # size of files inside data.d
+         │   │   ├── status      # status of this copy (ok or err)
+         │   │   ├── uuid        # id
+         │   │   ├── previous    # parent id
+         │   │   └── version     # version of the script
+         │   └── last -&gt; /var/backups/.../ok/20120405195300
+         └── tmp      # meanwhile a copy is made
+</code></pre>
+
+<h1>Why should I use it?</h1>
+
+<p>Do you need to retain and query information about how a
+backup was made but will prefer to not use a database?</p>
+
+<p>Maybe you will reallocate copies to other servers but wish
+you could known where did it come from?</p>
+
+<p>Do not know where to place the files you want to restore
+again?</p>
+
+<p>Want to save space but wish you don't need to wait for
+hours for a reconstruction process when you need some
+old files?</p>
+
+<p>Must you store things in the filesystem directly for performance,
+storage restrictions or easy of access?</p>
+
+<p>Absolutely need data stored in backups to be directly explorable
+and manipulable because you don't know where that file may be?</p>
+
+<p>You wish to construct you own backup policy, create you own reports
+or make tools around the process?</p>
+
+<p>Hate push backups because you don't want your backups to get
+deleted by intruders?</p>
+
+<p>transfer is pretty dumb, but can help with a lot of complicated
+problems, and it's just around 200 lines of shellscript (maybe half
+of that are comments!).</p>
+
+<p>Please try, and come to love or hate it.</p>
+
+<h1>How this came to be?</h1>
+
+<p>Once upon a time there was a tool created by the local
+wizard, him who created the current infrastructure.</p>
+
+<p>And for a time, things worked well, and people were
+happy.</p>
+
+<p>But eventually, he went to explore new lands, leaving
+his precious infrastructure for others to guard.</p>
+
+<p>And then, there came a problem, nobody understood
+his work, and things no longer worked well.</p>
+
+<p>With no adequate replacements, dark times ensured.</p>
+
+<p>Aberrations started to dwell in the new servers. And
+sometimes managed to get in the old ones too.</p>
+
+<p>Time passed and things got worse, till a ray of hope
+shined in the middle of darkness.</p>
+
+<p>A new tool appeared, it was young, but everybody could
+understand it.</p>
+
+<p>Should we trust that tool?</p>
+
+<h1>How do I get it?</h1>
+
+<p>At the top of the page there are download links, I will recommend
+to get into the github page.</p>
+
+<p>Check the README and source code. Run it once. Think about it.</p>
+
+<h1>Can I ask a question, contribute a patch or say hi?</h1>
+
+<p>Sure, send me an email (check my github profile) or ping me
+at twitter (@CarlosAntelo), you can also make a pull request
+if you want to.</p>
+
+<p>I will be very happy so just do it.</p>
+      </section>
+    </div>
+
+              <script type="text/javascript">
+            var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+            document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+          </script>
+          <script type="text/javascript">
+            try {
+              var pageTracker = _gat._getTracker("UA-30648788-1");
+            pageTracker._trackPageview();
+            } catch(err) {}
+          </script>
+
+  </body>
+</html>
