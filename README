@@ -3,7 +3,7 @@ a remote server in the local machine through ssh.
 
 USAGE:
 transfer [ [ -r REMOTE ] [ -l LOCAL ] [ -s SUBJECT ] 
-    [ -p PREFIX ] [ -b BASE ] [ -d ] ] | [ -v ] | [ -h ] 
+  [ -p PREFIX ] [ -b BASE ] [ -d ] ] | [ -v ] | [ -h ] 
 
 OPTIONS:
   -r: remote hostname, default: localhost
@@ -58,11 +58,11 @@ excluding files.
 
 EXAMPLE:
 
-transfer -r example.net -s apache <<EOF
+transfer -r example.net -s apache <<EOF_APACHE
 /var/www/
 /srv/www/
 /etc/apache2/
-EOF
+EOF_APACHE
 
 ENVIRONMENT:
 
@@ -75,4 +75,4 @@ Changing default values:
 REMOTE: -r, LOCAL: -l, SUBJECT: -s, DEST_BASE: -b, PREFIX: -p
 
 Parameters take precedence.
-
+    

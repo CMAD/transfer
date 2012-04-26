@@ -16,89 +16,89 @@
 #You should have received a copy of the GNU General Public License
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-version="1.0beta12" # usefully for future incompatibilities
+version="1.0beta13" # usefully for future incompatibilities
 
 _print_help() {
-  cat <<"  EOF" | cut -c5-
-    This is a backup script around rsync, it pulls files from 
-    a remote server in the local machine through ssh. 
+cat <<"EOF"
+This is a backup script around rsync, it pulls files from 
+a remote server in the local machine through ssh. 
 
-    USAGE:
-    transfer [ [ -r REMOTE ] [ -l LOCAL ] [ -s SUBJECT ] 
-        [ -p PREFIX ] [ -b BASE ] [ -d ] ] | [ -v ] | [ -h ] 
+USAGE:
+transfer [ [ -r REMOTE ] [ -l LOCAL ] [ -s SUBJECT ] 
+  [ -p PREFIX ] [ -b BASE ] [ -d ] ] | [ -v ] | [ -h ] 
 
-    OPTIONS:
-      -r: remote hostname, default: localhost
-      -l: local hostname, default: localhost (for metadata only)
-      -s: subject, a grouping for backups, e.g. apache, 
-          default: files
-      -b: base destination, default: /var/backups/hosts.d/
-          you can't use a relative path with this parameter
-      -p: prefix for all source paths
-      -d: debug, set echo on the shell
-      -v: version, print version number
-      -h: help, print this message
+OPTIONS:
+  -r: remote hostname, default: localhost
+  -l: local hostname, default: localhost (for metadata only)
+  -s: subject, a grouping for backups, e.g. apache, 
+      default: files
+  -b: base destination, default: /var/backups/hosts.d/
+      you can't use a relative path with this parameter
+  -p: prefix for all source paths
+  -d: debug, set echo on the shell
+  -v: version, print version number
+  -h: help, print this message
 
-    By default backups are stored in /var/backups/hosts.d/
+By default backups are stored in /var/backups/hosts.d/
 
-    Inside for every different remote, a folder will
-    be kept.
+Inside for every different remote, a folder will
+be kept.
 
-    A subject parameter intended to specify either a service
-    or otherwise know set of files further distinguishes the 
-    contents.
+A subject parameter intended to specify either a service
+or otherwise know set of files further distinguishes the 
+contents.
 
-    e.g. /var/backups/hosts.d/example.net/vhosts
+e.g. /var/backups/hosts.d/example.net/vhosts
 
-    Inside this folder even further distinction is made, 3 
-    different folders establish the status of the copies:
+Inside this folder even further distinction is made, 3 
+different folders establish the status of the copies:
 
-    tmp: meanwhile a copy is being made
-    err: if the script is interrupted or the transmission fails
-    ok: when the script finishes successfully
+tmp: meanwhile a copy is being made
+err: if the script is interrupted or the transmission fails
+ok: when the script finishes successfully
 
-    The final distinction is the date the copy was run. 
-    A symbolic link is present on the ok folder 
-    pointing to the last copy.
+The final distinction is the date the copy was run. 
+A symbolic link is present on the ok folder 
+pointing to the last copy.
 
-    A copy holds various plain text files with info on
-    when and how was the backup made, including the remote and 
-    local hostnames, the start, and finish time, size of the
-    archive, status, etc. 
+A copy holds various plain text files with info on
+when and how was the backup made, including the remote and 
+local hostnames, the start, and finish time, size of the
+archive, status, etc. 
 
-    Finally along with the metadata the data.d folder holds the 
-    actual files, keeping the full original path, file 
-    permissions, etc.
+Finally along with the metadata the data.d folder holds the 
+actual files, keeping the full original path, file 
+permissions, etc.
 
-    When possible the last ok copy of the same particular set of
-    files is used for hardlinking, saving space.
+When possible the last ok copy of the same particular set of
+files is used for hardlinking, saving space.
 
-    transfer takes input from stdin, one folder/file per line, 
-    currently if you need null terminated paths, you can set a wrapper 
-    around rsync, presetting the -0 parameter, the same goes for 
-    excluding files.
+transfer takes input from stdin, one folder/file per line, 
+currently if you need null terminated paths, you can set a wrapper 
+around rsync, presetting the -0 parameter, the same goes for 
+excluding files.
 
-    EXAMPLE:
+EXAMPLE:
 
-    transfer -r example.net -s apache <<EOF
-    /var/www/
-    /srv/www/
-    /etc/apache2/
-    EOF
+transfer -r example.net -s apache <<EOF_APACHE
+/var/www/
+/srv/www/
+/etc/apache2/
+EOF_APACHE
 
-    ENVIRONMENT:
+ENVIRONMENT:
 
-    RSYNC: name of the rsync executable or a wrapper
-    UUIDGEN: name of the uuidgen executable
-    DATEFMT: date format used for backup directories
+RSYNC: name of the rsync executable or a wrapper
+UUIDGEN: name of the uuidgen executable
+DATEFMT: date format used for backup directories
 
-    Changing default values:
+Changing default values:
 
-    REMOTE: -r, LOCAL: -l, SUBJECT: -s, DEST_BASE: -b, PREFIX: -p
+REMOTE: -r, LOCAL: -l, SUBJECT: -s, DEST_BASE: -b, PREFIX: -p
 
-    Parameters take precedence.
+Parameters take precedence.
     
-  EOF
+EOF
 }
 
 _date() {
