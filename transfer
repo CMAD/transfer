@@ -110,7 +110,6 @@ _date() {
 
 # give the opportunity to override defaults via shell
 # exports and parameters
-{
 
 REMOTE=${REMOTE-localhost}
 LOCAL=${LOCAL-localhost}
@@ -143,8 +142,6 @@ if [ "${DEST_BASE##/*}" ]; then
   echo You must use an absolute path for the base destination.
   exit 1
 fi
-
-}
 
 # date is used as the identifier of the backup and is 
 # more readable
