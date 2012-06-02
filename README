@@ -67,7 +67,6 @@ EOF_APACHE
 ENVIRONMENT:
 
 RSYNC: name of the rsync executable or a wrapper
-UUIDGEN: name of the uuidgen executable
 DATEFMT: date format used for backup directories
 
 Changing default values:

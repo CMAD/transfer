@@ -16,7 +16,7 @@
 #You should have received a copy of the GNU General Public License
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-version="1.0beta13" # usefully for future incompatibilities
+version="1.0rc1" # usefully for future incompatibilities
 
 _print_help() {
 cat <<"EOF"
@@ -89,7 +89,6 @@ EOF_APACHE
 ENVIRONMENT:
 
 RSYNC: name of the rsync executable or a wrapper
-UUIDGEN: name of the uuidgen executable
 DATEFMT: date format used for backup directories
 
 Changing default values:
@@ -117,7 +116,11 @@ SUBJECT=${SUBJECT-files}
 DEST_BASE=${DEST_BASE-/var/backups/hosts.d/}
 PREFIX=${PREFIX-/}
 RSYNC=${RSYNC-$(which rsync)}
-UUIDGEN=${UUIDGEN-$(which uuidgen)}
+
+_idgen() {
+  # simple semi-unique identifier
+  echo "$(hostname)::$REMOTE::$SUBJECT::$(_date)"
+}
 
 while getopts r:l:s:b:p:dvh PARAM; do
   case $PARAM in
@@ -133,8 +136,8 @@ while getopts r:l:s:b:p:dvh PARAM; do
   esac
 done
 
-if [ -z "${RSYNC}" ] || [ -z "${UUIDGEN}" ]; then
-  echo You must have rsync and uuidgen installed.
+if [ -z "${RSYNC}" ]; then
+  echo You must have rsync installed.
   exit 1
 fi
 
@@ -146,9 +149,9 @@ fi
 # date is used as the identifier of the backup and is 
 # more readable
 snapshot_date=$(_date) 
-# uuid is most usefull as a tie-breaker, 
+# uuid is much more verbose and better for non-local addressing,
 # when moving copies to another media, or along with other tools
-uuid=$($UUIDGEN)
+uid=$(_idgen)
 
 # backups are organized in a per host, per service basis
 dest=$DEST_BASE/$REMOTE/$SUBJECT
@@ -172,7 +175,7 @@ echo "$version" > version
 echo "$REMOTE"  > remote 
 echo "$SUBJECT" > subject 
 echo "$LOCAL"   > local  
-echo "$uuid"    > uuid 
+echo "$uid"     > uid 
 
 # the same files can just share the same inode
 if [ -d "$dest/ok/last/data.d/$PREFIX" ]; then
