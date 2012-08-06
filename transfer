@@ -149,7 +149,7 @@ fi
 # date is used as the identifier of the backup and is 
 # more readable
 snapshot_date=$(_date) 
-# uuid is much more verbose and better for non-local addressing,
+# uid is much more verbose and better for non-local addressing,
 # when moving copies to another media, or along with other tools
 uid=$(_idgen)
 
@@ -180,7 +180,7 @@ echo "$uid"     > uid
 # the same files can just share the same inode
 if [ -d "$dest/ok/last/data.d/$PREFIX" ]; then
   previous=$dest/ok/last/data.d/$PREFIX
-  cat "$dest/ok/last/uuid" > previous
+  cat "$dest/ok/last/uid" > previous
 else 
   previous="$dest/empty"
 fi
